@@ -65,16 +65,42 @@ def fictPlayNoBridge(numberOfCars):
 				carsNorth += 1
 			else:
 				car.second = 'B'
-				carsSouth +=1
+				carsSouth += 1
 
-		northCarCost = (float(carsNorth/100.0) + 45.0)*float(carsNorth)
-		southCarCost = (float(carsSouth/100.0) + 45.0)*float(carsSouth)
+		northCarCost = (float(carsNorth/100.0) + 45.0)*float(carsNorth)*2
+		southCarCost = (float(carsSouth/100.0) + 45.0)*float(carsSouth)*2
 		avgCost = float(northCarCost + southCarCost)/numberOfCars
 		timeSum += avgCost
 	return(timeSum/10.0) #average time is 65.0021285 in 10 iterations
 	
 def fictPlay_W_Bridge(numberOfCars):
-	
+	cars = createCars(numberOfCars, 'S')
+
+	timeSum = 0.0
+	for i in range(10):
+		carsNorth = 0
+		carsSouth = 0
+		carsBridge = 0
+		for car in cars:
+			goNorth = random.randint(0, 1)
+			if goNorth:
+				car.second = 'A'
+				# take the highway?
+				if random.randint(0, 1):
+					car.third = 'B'
+					carsBridge += 1
+				else:
+					carsNorth += 1
+
+			else:
+				car.second = 'B'
+				carsSouth +=1
+
+		northCarCost = (float(carsNorth/100.0) + 45.0)*(float(carsNorth)*2 + float(carsBridge))
+		southCarCost = (float(carsSouth/100.0) + 45.0)*(float(carsSouth)*2 + float(carsBridge))
+		avgCost = float(northCarCost + southCarCost)/numberOfCars
+		timeSum += avgCost
+	return(timeSum/10.0)
 
 if __name__ == '__main__':
 	numCars = 4000
@@ -85,6 +111,16 @@ if __name__ == '__main__':
 		X.append(numCars)
 		numCars+=1000
 	plt.title("Average time per car (no highway) ")
+	plt.plot(X,Y)
+	plt.show()
+
+	X = []
+	Y = []
+	for i in range(10):
+		Y.append(fictPlay_W_Bridge(numCars))
+		X.append(numCars)
+		numCars+=1000
+	plt.title("Average time per car (with highway) ")
 	plt.plot(X,Y)
 	plt.show()
 
