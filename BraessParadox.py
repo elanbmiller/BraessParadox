@@ -35,7 +35,30 @@ class car:
 		self.second = ' '
 		self.third = ' '
 		#Keep track of choices in the past and times perhaps
-		self.historicalChoices = {}
+		#three of three slots in historical choices:
+		#each index is a list with [<"Path as a string (for printing purposes perhaps">, avg cost, # times pursued]
+		self.historicalChoices = []
+		self.northPathData = []
+		self.northPathData.append('North')
+		self.northPathData.append(0)#running avg
+		self.northPathData.append(0)#number times tried
+		self.southPathData = []
+		self.southPathData.append('South')
+		self.southPathData.append(0)
+		self.southPathData.append(0)
+		self.northPathData_Bridge = []
+		self.northPathData_Bridge.append('NorthBridge')
+		self.northPathData_Bridge.append(0)
+		self.northPathData_Bridge.append(0)
+		self.historicalChoices.append(self.northPathData)
+		self.historicalChoices.append(self.southPathData)
+		self.historicalChoices.append(self.northPathData_Bridge)
+		
+		
+		#Booleans to keep track of last move
+		self.justWentNorth = False
+		self.justWentNorth_Bridge = False
+		self.justWentSouth = False
 	
 	#Pick path based on some algorithm and the location you're at and historical travel
 	#Also, update historical choices in here
@@ -101,12 +124,115 @@ def fictPlay_W_Bridge(numberOfCars):
 		avgCost = float(northCarCost + southCarCost)/numberOfCars
 		timeSum += avgCost
 	return(timeSum/10.0)
+	
+	
+
+#Save paths and associated costs to the car's historicalChoices list
+#Let's say epsilon is 0.1?
+#let historical choices be a list of list. First index in the list is a list of the path, the avg return and the number of times tried
+#second index is the same for the south path
+def eGreedyNoBridge(numberOfCars, epsilon):
+	
+	cars = createCars(numberOfCars, 'S')
+	avgCost = 0.0 #used for the end
+	
+	#use these as dictionary keys perhaps
+	northPath = 'North'
+	southPath = 'South'
+	
+	#Case of no highway, fictitious play
+	#Assume other players chose randomly, so should you!!
+	timeSum = 0.0
+	for i in range(10):
+		carsNorth = 0
+		carsSouth = 0
+		for car in cars:
+			#If previous history is north is best ...
+			if car.historicalChoices[0][1] <= car.historicalChoices[1][1]:
+				bestHistoryPath = 'North'
+			else:
+				bestHistoryPath = 'South'
+			#Assuming epsilon is 0.1 I guess 
+			if random.uniform(0, 1) > epsilon:
+				#Then follow path that's served best historically
+				if bestHistoryPath is northPath:
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+				else:
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+			#Epsilon case		
+			else:
+				if bestHistoryPath is northPath:
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+				else:
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+		#update all cars costs			
+		for car in cars:
+			#update historical returns with this new value incorporated into avg
+			if car.justWentNorth:
+				newAmountOfTimesTried = car.historicalChoices[0][2] + 1
+				#multiply avg by number of times tried to get the sum, add the new value and divide by historical times tried + 1
+				newAvg = (car.historicalChoices[0][1] * car.historicalChoices[0][2] + (float(carsNorth/100.0) + 45.0)) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[0][1] = newAvg
+				car.historicalChoices[0][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentNorth = False
+				
+				#Update avg cost
+				avgCost += newAvg
+				
+			else:
+				newAmountOfTimesTried = car.historicalChoices[1][2] + 1
+				#multiply avg by number of times tried to get the sum, add the new value and divide by historical times tried + 1
+				newAvg = (car.historicalChoices[1][1] * car.historicalChoices[1][2] + (float(carsNorth/100.0) + 45.0)) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[1][1] = newAvg
+				car.historicalChoices[1][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentSouth = False
+				
+				#update avg cost
+				avgCost += newAvg
+				
+		
+		avgCost = float(avgCost / numberOfCars)	
+		timeSum += avgCost
+		avgCost = 0
+	return(timeSum/10.0)
+	
+
+#Generate a random number of the 3
+#randomPath = random.choice([1, 2, 3]) 
 
 if __name__ == '__main__':
 	numCars = 4000
 	X = []
 	Y = []
+
+	#E-greedy no bridge -- Makes perfect sense, does worse when E is >> obviously
+	#should do better with >> E when a bridge is present
 	for i in range(10):
+		Y.append(eGreedyNoBridge(numCars, 0.5))
+		X.append(numCars)
+		numCars+=1000
+	plt.title("Average time per car for e-greedy (no highway) ")
+	plt.plot(X,Y)
+	plt.show()
+	
+	
+	'''	for i in range(10):
 		Y.append(fictPlayNoBridge(numCars))
 		X.append(numCars)
 		numCars+=1000
@@ -122,7 +248,7 @@ if __name__ == '__main__':
 		numCars+=1000
 	plt.title("Average time per car (with highway) ")
 	plt.plot(X,Y)
-	plt.show()
+	plt.show()'''
 
 #Case of highway, fictitious play
 #Assume other players pick logically
