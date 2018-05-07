@@ -21,8 +21,10 @@
 #   Observe the reward X_{j,t} and update the empirical mean for the chosen action.
 # 	https://jeremykun.com/2013/10/28/optimism-in-the-face-of-uncertainty-the-ucb1-algorithm/
 
-import networkx as nx
+from __future__ import division
 from random import randint
+
+import networkx as nx
 import random
 import matplotlib.pyplot as plt
 import math
@@ -454,6 +456,191 @@ def UCB1NoBridge(numberOfCars):
 		timeSum += avgCost
 		avgCost = 0.0
 	return(timeSum/100.0)
+	
+	
+def UCB1_W_Bridge(numberOfCars):
+	
+	cars = createCars(numberOfCars, 'S')
+	avgCost = 0.0 #used for the end
+	
+	#use these as dictionary keys perhaps
+	northPath = 'North'
+	southPath = 'South'
+	northPathBridge = 'NorthBridge'
+	
+	#Case of no highway, fictitious play
+	#Assume other players chose randomly, so should you!!
+	timeSum = 0.0
+	for i in range(100):
+		carsNorth = 0
+		carsSouth = 0
+		carsBridge = 0
+		for car in cars:
+			#First make sure every action has been played at least once
+			numberActionsPlayed = (car.historicalChoices[0][2] > 0 and car.historicalChoices[1][2] > 0 and car.historicalChoices[2][2] > 0)
+			if numberActionsPlayed == 3:
+				#Choose action that maximizes according to UCB1 formula
+				North_X_j_t = float(car.historicalChoices[0][1]) + math.sqrt(2.0 * math.log10(i) / car.historicalChoices[0][2]) #avg returns for this car + sqrt(2 log(i) / car.historicalChoices[0][2])
+				South_X_j_t = float(car.historicalChoices[1][1]) + math.sqrt(2.0 * math.log10(i) / car.historicalChoices[1][2])
+				Bridge_X_j_t = float(car.historicalChoices[2][1]) + math.sqrt(2.0 * math.log10(i) / car.historicalChoices[2][2])
+				if min(North_X_j_t, South_X_j_t, Bridge_X_j_t)  == North_X_j_t:
+					#Go north
+					bestHistoryPath = 'North'
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+				elif min(North_X_j_t, South_X_j_t, Bridge_X_j_t)  == South_X_j_t:
+					#Go south
+					bestHistoryPath = 'South'
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+				else:
+					#Use bridge
+					bestHistoryPath = 'NorthBridge'
+					car.second = 'A'
+					car.third = 'B'
+					carsBridge += 1
+					car.justWentNorth_Bridge = True
+			elif numberActionsPlayed == 2:
+				#Check which one hasn't been tried
+				if car.historicalChoices[0][2] == 0:
+					bestHistoryPath = 'North'
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+				elif car.historicalChoices[1][2] == 0:
+					#Go south
+					bestHistoryPath = 'South'
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+				else:
+					#Use bridge
+					bestHistoryPath = 'NorthBridge'
+					car.second = 'A'
+					car.third = 'B'
+					carsBridge += 1
+					car.justWentNorth_Bridge = True
+			elif numberActionsPlayed == 1:
+				if car.historicalChoices[0][2] > 0:
+					#Pick randomly
+					goSouth = random.randint(0, 1)
+					if goSouth:
+						bestHistoryPath = 'South'
+						car.second = 'B'
+						carsSouth += 1
+						car.justWentSouth = True
+					else:
+						#Use bridge
+						bestHistoryPath = 'NorthBridge'
+						car.second = 'A'
+						car.third = 'B'
+						carsBridge += 1
+						car.justWentNorth_Bridge = True
+				elif car.historicalChoices[1][2] > 0:
+					#Pick randomly
+					goNorth = random.randint(0, 1)
+					if goNorth:
+						bestHistoryPath = 'North'
+						car.second = 'A'
+						carsNorth += 1
+						car.justWentNorth = True
+					else:
+						#Use bridge
+						bestHistoryPath = 'NorthBridge'
+						car.second = 'A'
+						car.third = 'B'
+						carsBridge += 1
+						car.justWentNorth_Bridge = True
+				else:
+					#pick between north and south
+					#Pick randomly
+					goNorth = random.randint(0, 1)
+					if goNorth:
+						bestHistoryPath = 'North'
+						car.second = 'A'
+						carsNorth += 1
+						car.justWentNorth = True
+					else:
+						bestHistoryPath = 'South'
+						car.second = 'B'
+						carsSouth += 1
+						car.justWentSouth = True
+				
+			else:
+				#Pick randomly
+				randomPath = random.choice([1, 2, 3]) 
+				if randomPath == 1:
+					bestHistoryPath = 'North'
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+				elif randomPath == 2:
+					bestHistoryPath = 'South'
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+				else:
+					#Use bridge
+					bestHistoryPath = 'NorthBridge'
+					car.second = 'A'
+					car.third = 'B'
+					carsBridge += 1
+					car.justWentNorth_Bridge = True
+				
+		#update all cars costs			
+		for car in cars:
+			#update historical returns with this new value incorporated into avg
+			if car.justWentNorth:
+				newAmountOfTimesTried = car.historicalChoices[0][2] + 1
+				#multiply avg by number of times tried to get the sum, add the new value and divide by historical times tried + 1
+				newAvg = float(car.historicalChoices[0][1] * car.historicalChoices[0][2] + (float(carsNorth/100.0) + 45.0)) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[0][1] = newAvg
+				car.historicalChoices[0][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentNorth = False
+				
+				#Update avg cost
+				avgCost += float(carsNorth/100.0) + 45.0
+				
+			elif car.justWentSouth:
+				newAmountOfTimesTried = car.historicalChoices[1][2] + 1
+				#multiply avg by number of times tried to get the sum, add the new value and divide by historical times tried + 1
+				newAvg = float(car.historicalChoices[1][1] * car.historicalChoices[1][2] + (float(carsSouth/100.0) + 45.0)) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[1][1] = newAvg
+				car.historicalChoices[1][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentSouth = False
+				
+				#update avg cost
+				avgCost += float(carsSouth/100.0) + 45.0
+			
+			else:
+				newAmountOfTimesTried = car.historicalChoices[2][2] + 1
+				newAvg = float(car.historicalChoices[2][1] * car.historicalChoices[2][2] + (float((carsSouth + carsBridge)/100.0) + float((carsNorth + carsBridge)/100.0))) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[2][1] = newAvg
+				car.historicalChoices[2][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentNorth_Bridge = False
+				
+				#update avg cost
+				avgCost += float((carsSouth + carsBridge)/100.0) + float((carsNorth + carsBridge)/100.0)
+		
+		avgCost = float(avgCost) / numberOfCars	
+		timeSum += avgCost
+		avgCost = 0.0
+	return(timeSum/100.0)
+
 
 #Generate a random number of the 3
 #randomPath = random.choice([1, 2, 3]) 
@@ -468,10 +655,10 @@ if __name__ == '__main__':
 	#NOTE: TO speed it up, either edit iterations below or change number of iterations for averaging in algorithm above
 	
 	for i in range(10):
-		Y.append(UCB1NoBridge(numCars))
+		Y.append(UCB1_W_Bridge(numCars))
 		X.append(numCars)
 		numCars+=1000
-	plt.title("Average time per car for e-greedy (no highway) ")
+	plt.title("Average time per car for UCB1 (with highway) ")
 	plt.plot(X,Y)
 	plt.show()
 	
