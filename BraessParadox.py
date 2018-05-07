@@ -25,6 +25,7 @@ import networkx as nx
 from random import randint
 import random
 import matplotlib.pyplot as plt
+import math
 
 class car:
 	
@@ -354,6 +355,105 @@ def eGreedy_W_Bridge(numberOfCars, epsilon):
 		avgCost = 0
 	return(timeSum/1000.0)
 	
+	
+def UCB1NoBridge(numberOfCars):
+	
+	cars = createCars(numberOfCars, 'S')
+	avgCost = 0.0 #used for the end
+	
+	#use these as dictionary keys perhaps
+	northPath = 'North'
+	southPath = 'South'
+	northPathBridge = 'NorthBridge'
+	
+	#Case of no highway, fictitious play
+	#Assume other players chose randomly, so should you!!
+	timeSum = 0.0
+	for i in range(100):
+		carsNorth = 0
+		carsSouth = 0
+		for car in cars:
+			#First make sure every action has been played at least once
+			numberActionsPlayed = (car.historicalChoices[0][2] > 0 and car.historicalChoices[1][2] > 0)
+			if numberActionsPlayed == 2:
+				#Choose action that maximizes according to UCB1 formula
+				North_X_j_t = float(car.historicalChoices[0][1]) + math.sqrt(2.0 * math.log10(i) / car.historicalChoices[0][2]) #avg returns for this car + sqrt(2 log(i) / car.historicalChoices[0][2])
+				South_X_j_t = float(car.historicalChoices[1][1]) + math.sqrt(2.0 * math.log10(i) / car.historicalChoices[1][2])
+				if North_X_j_t <= South_X_j_t:
+					#Go north
+					bestHistoryPath = 'North'
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+				else:
+					#Go south
+					bestHistoryPath = 'South'
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+			elif numberActionsPlayed == 1:
+				if car.historicalChoices[0][2] > 0:
+					bestHistoryPath = 'South'
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+				else:
+					bestHistoryPath = 'North'
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+			else:
+				#Pick randomly
+				goNorth = random.randint(0, 1)
+				if goNorth:
+					bestHistoryPath = 'North'
+					car.second = 'A'
+					carsNorth += 1
+					car.justWentNorth = True
+				else:
+					bestHistoryPath = 'South'
+					car.second = 'B'
+					carsSouth += 1
+					car.justWentSouth = True
+				
+		#update all cars costs			
+		for car in cars:
+			#update historical returns with this new value incorporated into avg
+			if car.justWentNorth:
+				newAmountOfTimesTried = car.historicalChoices[0][2] + 1
+				#multiply avg by number of times tried to get the sum, add the new value and divide by historical times tried + 1
+				newAvg = float(car.historicalChoices[0][1] * car.historicalChoices[0][2] + (float(carsNorth/100.0) + 45.0)) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[0][1] = newAvg
+				car.historicalChoices[0][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentNorth = False
+				
+				#Update avg cost
+				avgCost += float(carsNorth/100.0) + 45.0
+				
+			else:
+				newAmountOfTimesTried = car.historicalChoices[1][2] + 1
+				#multiply avg by number of times tried to get the sum, add the new value and divide by historical times tried + 1
+				newAvg = float(car.historicalChoices[1][1] * car.historicalChoices[1][2] + (float(carsSouth/100.0) + 45.0)) / newAmountOfTimesTried
+				
+				#Update avg and times tried
+				car.historicalChoices[1][1] = newAvg
+				car.historicalChoices[1][2] = newAmountOfTimesTried
+				
+				#update boolean for next round
+				car.justWentSouth = False
+				
+				#update avg cost
+				avgCost += float(carsSouth/100.0) + 45.0
+				
+		
+		avgCost = float(avgCost) / numberOfCars	
+		timeSum += avgCost
+		avgCost = 0.0
+	return(timeSum/100.0)
 
 #Generate a random number of the 3
 #randomPath = random.choice([1, 2, 3]) 
@@ -366,6 +466,15 @@ if __name__ == '__main__':
 	#E-greedy no bridge -- Makes perfect sense, does worse when E is further from 0.5 obviously but only marginally
 	#should do better with >> E when a bridge is present
 	#NOTE: TO speed it up, either edit iterations below or change number of iterations for averaging in algorithm above
+	
+	for i in range(10):
+		Y.append(UCB1NoBridge(numCars))
+		X.append(numCars)
+		numCars+=1000
+	plt.title("Average time per car for e-greedy (no highway) ")
+	plt.plot(X,Y)
+	plt.show()
+	
 	'''
 	for i in range(10):
 		#Y.append(eGreedyNoBridge(numCars, 0.1))
@@ -376,7 +485,6 @@ if __name__ == '__main__':
 	#plt.plot(X,Y)
 	#plt.show()
 	
-	'''
 	for i in range(10):
 		Y.append(eGreedy_W_Bridge(numCars, 0.2))
 		X.append(numCars)
@@ -387,7 +495,7 @@ if __name__ == '__main__':
 	
 	
 	
-	'''	for i in range(10):
+	for i in range(10):
 		Y.append(fictPlayNoBridge(numCars))
 		X.append(numCars)
 		numCars+=1000
@@ -403,7 +511,8 @@ if __name__ == '__main__':
 		numCars+=1000
 	plt.title("Average time per car (with highway) ")
 	plt.plot(X,Y)
-	plt.show()'''
+	plt.show()
+	'''
 
 #Case of highway, fictitious play
 #Assume other players pick logically
