@@ -189,7 +189,7 @@ def eGreedyNoBridge(numberOfCars, epsilon):
 				car.justWentNorth = False
 				
 				#Update avg cost
-				avgCost += newAvg
+				avgCost += float(carsNorth/100.0) + 45.0
 				
 			else:
 				newAmountOfTimesTried = car.historicalChoices[1][2] + 1
@@ -204,12 +204,12 @@ def eGreedyNoBridge(numberOfCars, epsilon):
 				car.justWentSouth = False
 				
 				#update avg cost
-				avgCost += newAvg
+				avgCost += float(carsSouth/100.0) + 45.0
 				
 		
 		avgCost = float(avgCost) / numberOfCars	
 		timeSum += avgCost
-		avgCost = 0
+		avgCost = 0.0
 	return(timeSum/100.0)
 	
 	
@@ -318,7 +318,7 @@ def eGreedy_W_Bridge(numberOfCars, epsilon):
 				car.justWentNorth = False
 				
 				#Update avg cost
-				avgCost += newAvg
+				avgCost += float((carsNorth + carsBridge)/100.0) + 45.0
 				
 			elif car.justWentSouth:
 				newAmountOfTimesTried = car.historicalChoices[1][2] + 1
@@ -333,12 +333,11 @@ def eGreedy_W_Bridge(numberOfCars, epsilon):
 				car.justWentSouth = False
 				
 				#update avg cost
-				avgCost += newAvg
+				avgCost += float((carsSouth + carsBridge)/100.0) + 45.0
 			
 			else:
 				newAmountOfTimesTried = car.historicalChoices[2][2] + 1
 				newAvg = float(car.historicalChoices[2][1] * car.historicalChoices[2][2] + (float((carsSouth + carsBridge)/100.0) + float((carsNorth + carsBridge)/100.0))) / newAmountOfTimesTried
-				print(newAvg)
 				
 				#Update avg and times tried
 				car.historicalChoices[2][1] = newAvg
@@ -348,10 +347,9 @@ def eGreedy_W_Bridge(numberOfCars, epsilon):
 				car.justWentNorth_Bridge = False
 				
 				#update avg cost
-				avgCost += newAvg
+				avgCost += float((carsSouth + carsBridge)/100.0) + float((carsNorth + carsBridge)/100.0)
 		
 		avgCost = float(avgCost) / numberOfCars	
-		print(avgCost)
 		timeSum += avgCost
 		avgCost = 0
 	return(timeSum/1000.0)
@@ -368,24 +366,25 @@ if __name__ == '__main__':
 	#E-greedy no bridge -- Makes perfect sense, does worse when E is further from 0.5 obviously but only marginally
 	#should do better with >> E when a bridge is present
 	#NOTE: TO speed it up, either edit iterations below or change number of iterations for averaging in algorithm above
-	
+	'''
 	for i in range(10):
-		Y.append(eGreedyNoBridge(numCars, 0.1))
-		X.append(numCars)
+		#Y.append(eGreedyNoBridge(numCars, 0.1))
+		#X.append(numCars)
+		print(eGreedyNoBridge(numCars, 0.25))
 		numCars+=1000
-	plt.title("Average time per car for e-greedy (no highway) ")
-	plt.plot(X,Y)
-	plt.show()
+	#plt.title("Average time per car for e-greedy (no highway) ")
+	#plt.plot(X,Y)
+	#plt.show()
 	
 	'''
 	for i in range(10):
-		Y.append(eGreedy_W_Bridge(numCars, 0.4))
+		Y.append(eGreedy_W_Bridge(numCars, 0.2))
 		X.append(numCars)
 		numCars+=1000
-	plt.title("Average time per car for e-greedy (no highway) ")
+	plt.title("Average time per car for e-greedy (with highway) ")
 	plt.plot(X,Y)
 	plt.show()
-	'''
+	
 	
 	
 	'''	for i in range(10):
